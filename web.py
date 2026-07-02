@@ -1,5 +1,5 @@
 # portfolio_streamlit.py
-# Professional Portfolio with Modern UI - PROFILE UPLOADER ON HOME PAGE
+# Professional Portfolio with Permanent Profile Picture
 
 import streamlit as st
 import datetime
@@ -50,11 +50,11 @@ if 'profile_picture_uploaded' not in st.session_state:
     st.session_state.profile_picture_uploaded = False
 
 # ============================================================
-# PROFILE PICTURE FUNCTIONS
+# PERMANENT PROFILE PICTURE FUNCTIONS
 # ============================================================
 
 def save_profile_picture(uploaded_file):
-    """Save profile picture to session state and file"""
+    """Save profile picture permanently to file"""
     if uploaded_file is not None:
         try:
             # Read and resize image
@@ -72,16 +72,16 @@ def save_profile_picture(uploaded_file):
             st.session_state.profile_picture_uploaded = True
             
             # Save to file for permanent storage
-            save_profile_to_file(img_str, uploaded_file.name)
+            save_to_file(img_str, uploaded_file.name)
             
             return True
         except Exception as e:
-            st.error(f"❌ Error uploading image: {str(e)}")
+            st.error(f"❌ Error: {str(e)}")
             return False
     return False
 
-def save_profile_to_file(img_str, filename):
-    """Save profile picture to a file for permanent storage"""
+def save_to_file(img_str, filename):
+    """Save profile picture to JSON file"""
     try:
         data = {
             'base64': img_str,
@@ -95,7 +95,7 @@ def save_profile_to_file(img_str, filename):
         return False
 
 def load_profile_from_file():
-    """Load profile picture from file"""
+    """Load profile picture from JSON file"""
     try:
         if os.path.exists('profile_picture.json'):
             with open('profile_picture.json', 'r') as f:
@@ -108,31 +108,42 @@ def load_profile_from_file():
         pass
     return False
 
+def remove_profile_picture():
+    """Remove profile picture permanently"""
+    st.session_state.profile_picture_base64 = None
+    st.session_state.profile_picture_filename = None
+    st.session_state.profile_picture_uploaded = False
+    try:
+        if os.path.exists('profile_picture.json'):
+            os.remove('profile_picture.json')
+    except:
+        pass
+
 def get_profile_picture_html():
     """Get HTML for profile picture display"""
     if st.session_state.profile_picture_base64:
         return f"""
-        <div class="profile-image-container">
+        <div class="profile-container">
             <img src="data:image/png;base64,{st.session_state.profile_picture_base64}" 
                  alt="Profile Picture" 
-                 class="profile-image-img">
-            <div class="profile-image-overlay">
-                <span class="profile-image-emoji">📸</span>
+                 class="profile-img">
+            <div class="profile-overlay">
+                <span class="profile-emoji">📸</span>
             </div>
         </div>
         """
     else:
         return """
-        <div class="profile-image pulse">
+        <div class="profile-default">
             👨‍💻
         </div>
         """
 
-def profile_uploader_ui():
-    """Profile picture uploader UI with button"""
+def profile_upload_section():
+    """Profile picture upload section with permanent storage"""
     st.markdown("""
     <style>
-    .profile-image-container {
+    .profile-container {
         position: relative;
         width: 280px;
         height: 280px;
@@ -145,18 +156,18 @@ def profile_uploader_ui():
         cursor: pointer;
     }
     
-    .profile-image-container:hover {
+    .profile-container:hover {
         transform: scale(1.02);
         box-shadow: 0 30px 80px rgba(250, 204, 21, 0.25);
     }
     
-    .profile-image-img {
+    .profile-img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
     
-    .profile-image-overlay {
+    .profile-overlay {
         position: absolute;
         top: 0;
         left: 0;
@@ -170,17 +181,17 @@ def profile_uploader_ui():
         transition: opacity 0.3s ease;
     }
     
-    .profile-image-container:hover .profile-image-overlay {
+    .profile-container:hover .profile-overlay {
         opacity: 1;
     }
     
-    .profile-image-emoji {
+    .profile-emoji {
         font-size: 3rem;
         color: white;
         text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     }
     
-    .profile-image {
+    .profile-default {
         width: 280px;
         height: 280px;
         border-radius: 50%;
@@ -196,19 +207,19 @@ def profile_uploader_ui():
         user-select: none;
     }
     
-    .profile-image:hover {
+    .profile-default:hover {
         transform: scale(1.02) rotate(-2deg);
         box-shadow: 0 30px 80px rgba(250, 204, 21, 0.25);
     }
     
-    .upload-btn-wrapper {
+    .upload-wrapper {
         position: relative;
         overflow: hidden;
         display: inline-block;
         margin: 0.5rem 0;
     }
     
-    .upload-btn-wrapper input[type=file] {
+    .upload-wrapper input[type=file] {
         position: absolute;
         left: 0;
         top: 0;
@@ -218,7 +229,7 @@ def profile_uploader_ui():
         cursor: pointer;
     }
     
-    .upload-btn {
+    .btn-upload {
         background: linear-gradient(135deg, #facc15, #f59e0b);
         color: #0a0a0f;
         padding: 0.7rem 2rem;
@@ -229,14 +240,15 @@ def profile_uploader_ui():
         transition: all 0.3s ease;
         display: inline-block;
         font-size: 1rem;
+        width: 100%;
     }
     
-    .upload-btn:hover {
+    .btn-upload:hover {
         transform: scale(1.05);
         box-shadow: 0 10px 30px rgba(250, 204, 21, 0.3);
     }
     
-    .remove-btn {
+    .btn-remove {
         background: rgba(239, 68, 68, 0.15);
         color: #ef4444;
         padding: 0.7rem 2rem;
@@ -247,20 +259,12 @@ def profile_uploader_ui():
         transition: all 0.3s ease;
         display: inline-block;
         font-size: 1rem;
+        width: 100%;
     }
     
-    .remove-btn:hover {
+    .btn-remove:hover {
         background: rgba(239, 68, 68, 0.25);
         transform: scale(1.05);
-    }
-    
-    .upload-container {
-        text-align: center;
-        margin: 1rem 0;
-        padding: 1.5rem;
-        background: rgba(20, 20, 30, 0.5);
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
     }
     
     .status-badge {
@@ -285,27 +289,16 @@ def profile_uploader_ui():
     }
     
     @media (max-width: 768px) {
-        .profile-image-container {
-            width: 200px;
-            height: 200px;
-        }
-        .profile-image {
-            width: 200px;
-            height: 200px;
-            font-size: 5rem;
-        }
-        .upload-btn, .remove-btn {
-            padding: 0.5rem 1.5rem;
-            font-size: 0.9rem;
-        }
+        .profile-container { width: 200px; height: 200px; }
+        .profile-default { width: 200px; height: 200px; font-size: 5rem; }
     }
     </style>
     """, unsafe_allow_html=True)
     
-    # Show profile picture with upload overlay
+    # Display profile picture
     st.markdown(get_profile_picture_html(), unsafe_allow_html=True)
     
-    # Status badge
+    # Status
     if st.session_state.profile_picture_uploaded:
         st.markdown(f"""
         <div style="text-align: center;">
@@ -325,44 +318,36 @@ def profile_uploader_ui():
     
     with col1:
         st.markdown("""
-        <div class="upload-btn-wrapper">
-            <button class="upload-btn">📤 Upload Picture</button>
+        <div class="upload-wrapper">
+            <button class="btn-upload">📤 Upload Picture</button>
         </div>
         """, unsafe_allow_html=True)
         
         uploaded_file = st.file_uploader(
             "Choose a profile picture",
             type=['jpg', 'jpeg', 'png', 'gif', 'webp'],
-            key="home_profile_upload",
+            key="profile_upload",
             label_visibility="collapsed"
         )
         
         if uploaded_file is not None:
             with st.spinner("Uploading..."):
                 if save_profile_picture(uploaded_file):
-                    st.success("✅ Profile picture uploaded successfully!")
+                    st.success("✅ Profile picture saved permanently!")
                     time.sleep(0.5)
                     st.rerun()
     
     with col2:
         if st.session_state.profile_picture_uploaded:
-            if st.button("🗑️ Remove Picture", key="remove_home", use_container_width=True):
-                st.session_state.profile_picture_base64 = None
-                st.session_state.profile_picture_filename = None
-                st.session_state.profile_picture_uploaded = False
-                # Remove from file
-                try:
-                    if os.path.exists('profile_picture.json'):
-                        os.remove('profile_picture.json')
-                except:
-                    pass
+            if st.button("🗑️ Remove", key="remove_profile", use_container_width=True):
+                remove_profile_picture()
                 st.success("✅ Profile picture removed!")
                 st.rerun()
     
     st.markdown("""
     <div style="margin-top: 0.5rem; padding: 0.8rem; background: rgba(255,255,255,0.02); border-radius: 10px;">
         <p style="color: #64748b; font-size: 0.75rem; text-align: center; margin: 0;">
-            💡 Hover over the image to change · Supports JPG, PNG, GIF, WEBP
+            💡 Hover over image to change · Supports JPG, PNG, GIF, WEBP
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -514,9 +499,7 @@ testimonials_data = [
 
 st.markdown("""
 <style>
-    .stApp {
-        background: #0a0a0f;
-    }
+    .stApp { background: #0a0a0f; }
     
     .glass-card {
         background: rgba(20, 20, 30, 0.7);
@@ -622,9 +605,7 @@ st.markdown("""
         transform: translateY(-3px) scale(1.1);
     }
     
-    .skill-container {
-        margin: 1.2rem 0;
-    }
+    .skill-container { margin: 1.2rem 0; }
     
     .skill-label {
         display: flex;
@@ -684,24 +665,9 @@ st.markdown("""
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     }
     
-    .project-icon {
-        font-size: 3.5rem;
-        margin-bottom: 0.5rem;
-        display: block;
-    }
-    
-    .project-title {
-        color: #fff;
-        font-size: 1.2rem;
-        font-weight: 700;
-        margin: 0.5rem 0;
-    }
-    
-    .project-desc {
-        color: #94a3b8;
-        font-size: 0.9rem;
-        line-height: 1.6;
-    }
+    .project-icon { font-size: 3.5rem; margin-bottom: 0.5rem; display: block; }
+    .project-title { color: #fff; font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0; }
+    .project-desc { color: #94a3b8; font-size: 0.9rem; line-height: 1.6; }
     
     .project-link-btn {
         display: inline-block;
@@ -749,31 +715,10 @@ st.markdown("""
         transform: translateY(-5px);
     }
     
-    .testimonial-avatar {
-        font-size: 4rem;
-        margin-bottom: 0.5rem;
-        display: block;
-    }
-    
-    .testimonial-name {
-        color: #fff;
-        font-size: 1.1rem;
-        font-weight: 700;
-    }
-    
-    .testimonial-role {
-        color: #facc15;
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
-    
-    .testimonial-text {
-        color: #94a3b8;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        margin-top: 0.5rem;
-        font-style: italic;
-    }
+    .testimonial-avatar { font-size: 4rem; margin-bottom: 0.5rem; display: block; }
+    .testimonial-name { color: #fff; font-size: 1.1rem; font-weight: 700; }
+    .testimonial-role { color: #facc15; font-size: 0.85rem; font-weight: 500; }
+    .testimonial-text { color: #94a3b8; font-size: 0.95rem; line-height: 1.6; margin-top: 0.5rem; font-style: italic; }
     
     .divider {
         height: 1px;
@@ -798,11 +743,7 @@ st.markdown("""
         font-size: 0.8rem;
     }
     
-    .status-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
+    .status-item { display: flex; align-items: center; gap: 0.5rem; }
     
     .login-container {
         background: rgba(20, 20, 30, 0.8);
@@ -815,23 +756,9 @@ st.markdown("""
         box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
     }
     
-    .login-title {
-        font-size: 2.5rem;
-        font-weight: 800;
-        text-align: center;
-        color: #fff;
-    }
-    
-    .login-title span {
-        color: #facc15;
-    }
-    
-    .login-subtitle {
-        text-align: center;
-        color: #94a3b8;
-        font-size: 1rem;
-        margin-bottom: 2rem;
-    }
+    .login-title { font-size: 2.5rem; font-weight: 800; text-align: center; color: #fff; }
+    .login-title span { color: #facc15; }
+    .login-subtitle { text-align: center; color: #94a3b8; font-size: 1rem; margin-bottom: 2rem; }
     
     .stButton > button {
         background: linear-gradient(135deg, #facc15, #f59e0b) !important;
@@ -859,13 +786,8 @@ st.markdown("""
         50% { transform: scale(1.05); }
     }
     
-    .fade-in-up {
-        animation: fadeInUp 0.8s ease forwards;
-    }
-    
-    .pulse {
-        animation: pulse 2s ease-in-out infinite;
-    }
+    .fade-in-up { animation: fadeInUp 0.8s ease forwards; }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
     
     @media (max-width: 768px) {
         .main-title { font-size: 2.8rem !important; }
@@ -893,7 +815,7 @@ def copy_button(text, label):
         """, unsafe_allow_html=True)
     with col2:
         if st.button("📋 Copy", key=f"copy_{text[:10]}"):
-            st.write(f"✅ Copied: {text}")
+            st.success(f"✅ Copied: {text}")
 
 def display_skill(name, level, icon=''):
     st.markdown(f"""
@@ -1019,7 +941,7 @@ def settings_page():
     
     with tab1:
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        profile_uploader_ui()
+        profile_upload_section()
         st.markdown('</div>', unsafe_allow_html=True)
     
     with tab2:
@@ -1116,8 +1038,8 @@ def home_page():
         <div style="text-align: center; margin-top: 2rem;">
         """, unsafe_allow_html=True)
         
-        # Profile picture uploader on home page
-        profile_uploader_ui()
+        # Profile picture upload section on home page
+        profile_upload_section()
         
         st.markdown("""
         </div>
@@ -1486,8 +1408,7 @@ def sidebar():
 
 def main():
     # Load profile picture from file on startup
-    if not st.session_state.profile_picture_uploaded:
-        load_profile_from_file()
+    load_profile_from_file()
     
     if st.session_state.show_settings:
         settings_page()
