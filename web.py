@@ -927,26 +927,8 @@ def home_page():
         """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown(f"""
-        <div style="text-align: center; margin-top: 2rem;">
-            {get_profile_picture_html()}
-            <div style="margin-top: 1rem;">
-                <div style="display: flex; justify-content: center; gap: 1rem; font-size: 2rem;">
-                    <a href="https://github.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none;">🐙</a>
-                    <a href="https://www.linkedin.com/in/musa-faisal-12345/" target="_blank" style="color: #facc15; text-decoration: none;">💼</a>
-                    <a href="https://twitter.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none;">🐦</a>
-                    <a href="https://instagram.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none;">📷</a>
-                </div>
-                <div style="margin-top: 0.5rem;">
-                    <a href="#" onclick="document.querySelector('[data-testid=\"stSidebar\"]').querySelector('button:contains(\"⚙️ Settings\")').click(); return false;" 
-                       style="color: #94a3b8; text-decoration: none; font-size: 0.8rem;">
-                       🖼️ Change Profile Picture
-                    </a>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
+       
+           
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================
