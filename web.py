@@ -1,5 +1,5 @@
 # portfolio_streamlit.py
-# Professional Portfolio with Modern UI - WITH PERMANENT PROFILE PICTURE
+# Professional Portfolio with Modern UI - WITH PROFILE UPLOADER
 
 import streamlit as st
 import datetime
@@ -7,8 +7,6 @@ import time
 import base64
 from PIL import Image
 import io
-import os
-import hashlib
 
 # ============================================================
 # PAGE CONFIGURATION
@@ -42,18 +40,12 @@ if 'users' not in st.session_state:
     }
 if 'messages' not in st.session_state:
     st.session_state.messages = []
-if 'copy_success' not in st.session_state:
-    st.session_state.copy_success = False
-if 'copy_text' not in st.session_state:
-    st.session_state.copy_text = ''
 if 'profile_picture' not in st.session_state:
     st.session_state.profile_picture = None
 if 'profile_picture_base64' not in st.session_state:
     st.session_state.profile_picture_base64 = None
 if 'profile_picture_filename' not in st.session_state:
     st.session_state.profile_picture_filename = None
-if 'profile_picture_uploaded' not in st.session_state:
-    st.session_state.profile_picture_uploaded = False
 
 # ============================================================
 # PORTFOLIO DATA
@@ -197,28 +189,25 @@ testimonials_data = [
 ]
 
 # ============================================================
-# HELPER FUNCTIONS FOR PROFILE PICTURE
+# PROFILE PICTURE FUNCTIONS
 # ============================================================
 
 def save_profile_picture(uploaded_file):
-    """Save profile picture to session state as base64"""
+    """Save profile picture to session state"""
     if uploaded_file is not None:
         try:
-            # Read the image
+            # Read and resize image
             image = Image.open(uploaded_file)
-            
-            # Resize image to standard size (500x500) to save memory
             image.thumbnail((500, 500), Image.LANCZOS)
             
             # Convert to base64
             buffered = io.BytesIO()
-            image.save(buffered, format=image.format if image.format else "PNG")
+            image.save(buffered, format="PNG")
             img_str = base64.b64encode(buffered.getvalue()).decode()
             
             # Store in session state
             st.session_state.profile_picture_base64 = img_str
             st.session_state.profile_picture_filename = uploaded_file.name
-            st.session_state.profile_picture_uploaded = True
             st.session_state.profile_picture = image
             
             return True
@@ -228,169 +217,139 @@ def save_profile_picture(uploaded_file):
     return False
 
 def get_profile_picture_html():
-    """Get HTML for profile picture"""
+    """Get HTML for profile picture display"""
     if st.session_state.profile_picture_base64:
         return f"""
-        <div class="profile-image-container">
+        <div style="position: relative; width: 280px; height: 280px; margin: 0 auto;">
             <img src="data:image/png;base64,{st.session_state.profile_picture_base64}" 
-                 alt="Profile Picture" 
-                 class="profile-image-img">
-            <div class="profile-image-overlay">
-                <span class="profile-image-emoji">📸</span>
+                 style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; 
+                        border: 4px solid rgba(250, 204, 21, 0.3); 
+                        box-shadow: 0 20px 60px rgba(250, 204, 21, 0.15);">
+            <div style="position: absolute; bottom: 10px; right: 10px; 
+                        background: rgba(0,0,0,0.7); border-radius: 50%; 
+                        padding: 8px; font-size: 1.2rem;">
+                📸
             </div>
         </div>
         """
     else:
         return """
-        <div class="profile-image pulse">
+        <div style="width: 280px; height: 280px; border-radius: 50%; 
+                    background: linear-gradient(135deg, #facc15, #f59e0b);
+                    display: flex; align-items: center; justify-content: center; 
+                    font-size: 7rem; border: 4px solid rgba(250, 204, 21, 0.2);
+                    box-shadow: 0 20px 60px rgba(250, 204, 21, 0.1);
+                    margin: 0 auto;">
             👨‍💻
         </div>
         """
 
-def display_profile_picture_uploader():
-    """Display profile picture upload section"""
+def profile_uploader():
+    """Profile picture uploader UI"""
     st.markdown("""
     <style>
-    .profile-image-container {
-        position: relative;
-        width: 280px;
-        height: 280px;
-        margin: 0 auto;
-        border-radius: 50%;
-        overflow: hidden;
-        border: 4px solid rgba(250, 204, 21, 0.2);
-        box-shadow: 0 20px 60px rgba(250, 204, 21, 0.1);
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .profile-image-container:hover {
-        transform: scale(1.02);
-        box-shadow: 0 30px 80px rgba(250, 204, 21, 0.2);
-    }
-    
-    .profile-image-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    
-    .profile-image-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        cursor: pointer;
-    }
-    
-    .profile-image-container:hover .profile-image-overlay {
-        opacity: 1;
-    }
-    
-    .profile-image-emoji {
-        font-size: 3rem;
-        color: white;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-    }
-    
-    .profile-image {
-        width: 280px;
-        height: 280px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #facc15, #f59e0b);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 7rem;
-        border: 4px solid rgba(250, 204, 21, 0.2);
-        box-shadow: 0 20px 60px rgba(250, 204, 21, 0.1);
-        margin: 0 auto;
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        user-select: none;
-    }
-    
-    .profile-image:hover {
-        transform: scale(1.02) rotate(-2deg);
-        box-shadow: 0 30px 80px rgba(250, 204, 21, 0.2);
-    }
-    
-    .upload-section {
+    .upload-container {
+        background: rgba(20, 20, 30, 0.7);
+        border: 2px dashed rgba(250, 204, 21, 0.2);
+        border-radius: 20px;
+        padding: 2rem;
         text-align: center;
+        transition: all 0.3s ease;
         margin: 1rem 0;
-        padding: 1.5rem;
-        background: rgba(20, 20, 30, 0.5);
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
     }
-    
-    .upload-btn-wrapper {
-        position: relative;
-        overflow: hidden;
-        display: inline-block;
+    .upload-container:hover {
+        border-color: rgba(250, 204, 21, 0.5);
+        background: rgba(20, 20, 30, 0.9);
     }
-    
-    .upload-btn-wrapper input[type=file] {
-        font-size: 100px;
-        position: absolute;
-        left: 0;
-        top: 0;
-        opacity: 0;
-        cursor: pointer;
+    .upload-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
     }
-    
-    .upload-btn {
-        background: linear-gradient(135deg, #facc15, #f59e0b);
-        color: #0a0a0f;
-        padding: 0.6rem 1.5rem;
-        border-radius: 50px;
-        font-weight: 700;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: inline-block;
+    .upload-text {
+        color: #94a3b8;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
     }
-    
-    .upload-btn:hover {
-        transform: scale(1.05);
-        box-shadow: 0 10px 30px rgba(250, 204, 21, 0.3);
+    .upload-subtext {
+        color: #64748b;
+        font-size: 0.85rem;
     }
-    
+    .preview-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 1rem 0;
+    }
+    .preview-img {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid rgba(250, 204, 21, 0.3);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
     .remove-btn {
-        background: rgba(239, 68, 68, 0.2);
+        background: rgba(239, 68, 68, 0.15);
         color: #ef4444;
-        padding: 0.6rem 1.5rem;
-        border-radius: 50px;
-        font-weight: 700;
         border: 1px solid rgba(239, 68, 68, 0.3);
+        padding: 0.5rem 1.5rem;
+        border-radius: 50px;
         cursor: pointer;
         transition: all 0.3s ease;
-        display: inline-block;
-        margin-left: 0.5rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
     }
-    
     .remove-btn:hover {
-        background: rgba(239, 68, 68, 0.3);
+        background: rgba(239, 68, 68, 0.25);
         transform: scale(1.05);
     }
-    
-    @media (max-width: 768px) {
-        .profile-image-container {
-            width: 200px;
-            height: 200px;
-        }
-        .profile-image {
-            width: 200px;
-            height: 200px;
-            font-size: 5rem;
-        }
+    .file-uploader {
+        margin: 1rem 0;
     }
     </style>
+    """, unsafe_allow_html=True)
+    
+    # Show current profile picture
+    if st.session_state.profile_picture_base64:
+        st.markdown("### 🖼️ Current Profile Picture")
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.image(f"data:image/png;base64,{st.session_state.profile_picture_base64}", 
+                    width=200, 
+                    output_format="PNG")
+            st.caption(f"📁 {st.session_state.profile_picture_filename}")
+            
+            if st.button("🗑️ Remove Picture", key="remove_pic", use_container_width=True):
+                st.session_state.profile_picture_base64 = None
+                st.session_state.profile_picture_filename = None
+                st.session_state.profile_picture = None
+                st.success("✅ Profile picture removed!")
+                st.rerun()
+    
+    # Upload new picture
+    st.markdown("### 📤 Upload New Picture")
+    uploaded_file = st.file_uploader(
+        "Choose a profile picture",
+        type=['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        key="profile_uploader",
+        help="Upload a profile picture (JPG, PNG, GIF, WEBP)"
+    )
+    
+    if uploaded_file is not None:
+        if save_profile_picture(uploaded_file):
+            st.success("✅ Profile picture uploaded successfully!")
+            st.rerun()
+        else:
+            st.error("❌ Failed to upload picture. Please try again.")
+    
+    st.markdown("""
+    <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 10px;">
+        <p style="color: #64748b; font-size: 0.8rem;">
+            💡 <strong>Tip:</strong> Upload a square image for best results. 
+            Supported formats: JPG, PNG, GIF, WEBP
+        </p>
+    </div>
     """, unsafe_allow_html=True)
 
 # ============================================================
@@ -399,19 +358,18 @@ def display_profile_picture_uploader():
 
 st.markdown("""
 <style>
-    /* Main background */
+    /* Main Styles */
     .stApp {
         background: #0a0a0f;
     }
     
-    /* Glass morphism cards */
     .glass-card {
         background: rgba(20, 20, 30, 0.7);
         backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.05);
         border-radius: 24px;
         padding: 2rem;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.4s ease;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         margin: 1rem 0;
     }
@@ -419,10 +377,8 @@ st.markdown("""
     .glass-card:hover {
         transform: translateY(-5px);
         border-color: rgba(250, 204, 21, 0.3);
-        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
     }
     
-    /* Gradient text */
     .gradient-text {
         background: linear-gradient(135deg, #facc15 0%, #f59e0b 50%, #f97316 100%);
         -webkit-background-clip: text;
@@ -431,7 +387,6 @@ st.markdown("""
         font-weight: 800;
     }
     
-    /* Typography */
     .main-title {
         font-size: 4rem !important;
         font-weight: 900 !important;
@@ -454,21 +409,18 @@ st.markdown("""
         font-weight: 300;
     }
     
-    /* Stats cards */
     .stat-card {
         background: rgba(20, 20, 30, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.05);
         border-radius: 16px;
         padding: 1.5rem;
         text-align: center;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        cursor: default;
+        transition: all 0.3s ease;
     }
     
     .stat-card:hover {
         border-color: rgba(250, 204, 21, 0.3);
         transform: scale(1.02);
-        box-shadow: 0 10px 30px rgba(250, 204, 21, 0.05);
     }
     
     .stat-number {
@@ -485,37 +437,36 @@ st.markdown("""
         margin-top: 0.3rem;
     }
     
-    /* Login container */
-    .login-container {
-        background: rgba(20, 20, 30, 0.8);
-        backdrop-filter: blur(20px);
+    .social-icons {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        margin: 1rem 0;
+    }
+    
+    .social-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 32px;
-        padding: 3rem;
-        max-width: 440px;
-        margin: 2rem auto;
-        box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
-    }
-    
-    .login-title {
-        font-size: 2.5rem;
-        font-weight: 800;
-        text-align: center;
-        color: #fff;
-    }
-    
-    .login-title span {
-        color: #facc15;
-    }
-    
-    .login-subtitle {
-        text-align: center;
         color: #94a3b8;
-        font-size: 1rem;
-        margin-bottom: 2rem;
+        font-size: 1.5rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
     }
     
-    /* Skills */
+    .social-icon:hover {
+        background: rgba(250, 204, 21, 0.1);
+        border-color: #facc15;
+        color: #facc15;
+        transform: translateY(-3px) scale(1.1);
+    }
+    
     .skill-container {
         margin: 1.2rem 0;
     }
@@ -540,10 +491,9 @@ st.markdown("""
         height: 100%;
         background: linear-gradient(90deg, #facc15, #f59e0b);
         border-radius: 10px;
-        transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: width 1.5s ease;
     }
     
-    /* Timeline */
     .timeline-item {
         border-left: 2px solid #facc15;
         padding-left: 2rem;
@@ -563,56 +513,20 @@ st.markdown("""
         border: 2px solid #0a0a0f;
     }
     
-    .timeline-title {
-        color: #fff;
-        font-size: 1.2rem;
-        font-weight: 700;
-    }
-    
-    .timeline-sub {
-        color: #94a3b8;
-        font-size: 0.95rem;
-    }
-    
-    .timeline-desc {
-        color: #cbd5e1;
-        margin-top: 0.5rem;
-        line-height: 1.6;
-    }
-    
-    /* Project cards */
     .project-card {
         background: rgba(20, 20, 30, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.05);
         border-radius: 20px;
         padding: 1.5rem;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.4s ease;
         height: 100%;
         margin: 0.5rem 0;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .project-card::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(250, 204, 21, 0.05), transparent);
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-    
-    .project-card:hover::after {
-        opacity: 1;
     }
     
     .project-card:hover {
-        border-color: rgba(250, 204, 21, 0.3);
-        transform: translateY(-8px);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        border-color: rgba(250, 204, 21, 0.2);
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     }
     
     .project-icon {
@@ -664,7 +578,6 @@ st.markdown("""
         margin: 0.2rem;
     }
     
-    /* Testimonials */
     .testimonial-card {
         background: rgba(20, 20, 30, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.05);
@@ -672,14 +585,13 @@ st.markdown("""
         padding: 1.5rem;
         text-align: center;
         height: 100%;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.4s ease;
         margin: 0.5rem 0;
     }
     
     .testimonial-card:hover {
-        border-color: rgba(250, 204, 21, 0.3);
+        border-color: rgba(250, 204, 21, 0.2);
         transform: translateY(-5px);
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
     }
     
     .testimonial-avatar {
@@ -708,36 +620,12 @@ st.markdown("""
         font-style: italic;
     }
     
-    /* Profile image */
-    .profile-image {
-        width: 280px;
-        height: 280px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #facc15, #f59e0b);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 7rem;
-        border: 4px solid rgba(250, 204, 21, 0.2);
-        box-shadow: 0 20px 60px rgba(250, 204, 21, 0.1);
-        margin: 0 auto;
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        user-select: none;
-    }
-    
-    .profile-image:hover {
-        transform: scale(1.02) rotate(-2deg);
-        box-shadow: 0 30px 80px rgba(250, 204, 21, 0.2);
-    }
-    
-    /* Divider */
     .divider {
         height: 1px;
         background: linear-gradient(90deg, transparent, rgba(250, 204, 21, 0.2), transparent);
         margin: 2rem 0;
     }
     
-    /* Status bar */
     .status-bar {
         position: fixed;
         bottom: 0;
@@ -761,131 +649,6 @@ st.markdown("""
         gap: 0.5rem;
     }
     
-    /* Streamlit overrides */
-    .stTextInput > div > div > input {
-        background: rgba(255, 255, 255, 0.05) !important;
-        color: #fff !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        border-radius: 12px !important;
-        padding: 0.8rem 1rem !important;
-        font-size: 1rem !important;
-    }
-    
-    .stTextInput > div > div > input:focus {
-        border-color: #facc15 !important;
-        box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.1) !important;
-    }
-    
-    .stTextArea > div > div > textarea {
-        background: rgba(255, 255, 255, 0.05) !important;
-        color: #fff !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        border-radius: 12px !important;
-    }
-    
-    .stTextArea > div > div > textarea:focus {
-        border-color: #facc15 !important;
-        box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.1) !important;
-    }
-    
-    .stButton > button {
-        background: linear-gradient(135deg, #facc15, #f59e0b) !important;
-        color: #0a0a0f !important;
-        font-weight: 700 !important;
-        border: none !important;
-        border-radius: 50px !important;
-        padding: 0.75rem 2rem !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        width: 100% !important;
-    }
-    
-    .stButton > button:hover {
-        transform: scale(1.02) !important;
-        box-shadow: 0 10px 30px rgba(250, 204, 21, 0.3) !important;
-    }
-    
-    .css-1d391kg {
-        background: rgba(10, 10, 15, 0.95) !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.03) !important;
-    }
-    
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-        width: 6px;
-    }
-    ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.02);
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #facc15;
-        border-radius: 10px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: #f59e0b;
-    }
-    
-    /* Social icons container */
-    .social-icons {
-        display: flex;
-        justify-content: center;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-        margin: 1rem 0;
-    }
-    
-    .social-icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        color: #94a3b8;
-        font-size: 1.5rem;
-        text-decoration: none;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .social-icon:hover {
-        background: rgba(250, 204, 21, 0.1);
-        border-color: #facc15;
-        color: #facc15;
-        transform: translateY(-3px) scale(1.1);
-        box-shadow: 0 10px 30px rgba(250, 204, 21, 0.1);
-    }
-    
-    /* Responsive */
-    @media (max-width: 768px) {
-        .main-title {
-            font-size: 2.8rem !important;
-        }
-        .profile-image {
-            width: 200px;
-            height: 200px;
-            font-size: 5rem;
-        }
-        .login-container {
-            padding: 2rem;
-            margin: 1rem;
-        }
-        .status-bar {
-            padding: 0.3rem 1rem;
-            font-size: 0.7rem;
-            flex-wrap: wrap;
-        }
-        .social-icons {
-            gap: 0.8rem;
-        }
-        .social-icon {
-            width: 40px;
-            height: 40px;
-            font-size: 1.2rem;
-        }
-    }
-    
-    /* Animations */
     @keyframes fadeInUp {
         from {
             opacity: 0;
@@ -898,47 +661,61 @@ st.markdown("""
     }
     
     @keyframes pulse {
-        0%, 100% {
-            transform: scale(1);
-        }
-        50% {
-            transform: scale(1.05);
-        }
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
     }
     
     .fade-in-up {
-        animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        animation: fadeInUp 0.8s ease forwards;
     }
     
     .pulse {
         animation: pulse 2s ease-in-out infinite;
     }
     
-    /* Toast notification */
-    .copy-toast {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(20, 20, 30, 0.95);
+    .login-container {
+        background: rgba(20, 20, 30, 0.8);
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(250, 204, 21, 0.2);
-        border-radius: 16px;
-        padding: 1rem 2rem;
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        gap: 0.8rem;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-        animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 32px;
+        padding: 3rem;
+        max-width: 440px;
+        margin: 2rem auto;
+        box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
     }
     
-    .copy-toast-success {
-        border-color: rgba(34, 197, 94, 0.3);
+    .login-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        text-align: center;
+        color: #fff;
     }
     
-    .copy-toast-error {
-        border-color: rgba(239, 68, 68, 0.3);
+    .login-title span {
+        color: #facc15;
+    }
+    
+    .stButton > button {
+        background: linear-gradient(135deg, #facc15, #f59e0b) !important;
+        color: #0a0a0f !important;
+        font-weight: 700 !important;
+        border: none !important;
+        border-radius: 50px !important;
+        padding: 0.75rem 2rem !important;
+        transition: all 0.3s ease !important;
+        width: 100% !important;
+    }
+    
+    .stButton > button:hover {
+        transform: scale(1.02) !important;
+        box-shadow: 0 10px 30px rgba(250, 204, 21, 0.3) !important;
+    }
+    
+    @media (max-width: 768px) {
+        .main-title { font-size: 2.8rem !important; }
+        .status-bar { flex-wrap: wrap; }
+        .social-icons { gap: 0.8rem; }
+        .social-icon { width: 40px; height: 40px; font-size: 1.2rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -947,81 +724,21 @@ st.markdown("""
 # HELPER FUNCTIONS
 # ============================================================
 
-def copy_to_clipboard(text):
-    """Copy text to clipboard using JavaScript"""
-    st.session_state.copy_success = True
-    st.session_state.copy_text = text
-    st.components.v1.html(f"""
-        <script>
-            function copyText() {{
-                const text = `{text}`;
-                navigator.clipboard.writeText(text).then(() => {{
-                    const toast = document.createElement('div');
-                    toast.className = 'copy-toast copy-toast-success';
-                    toast.innerHTML = '✅ Copied to clipboard!';
-                    document.body.appendChild(toast);
-                    setTimeout(() => {{
-                        toast.remove();
-                    }}, 2000);
-                }}).catch(() => {{
-                    const textArea = document.createElement('textarea');
-                    textArea.value = text;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    textArea.remove();
-                    const toast = document.createElement('div');
-                    toast.className = 'copy-toast copy-toast-success';
-                    toast.innerHTML = '✅ Copied to clipboard!';
-                    document.body.appendChild(toast);
-                    setTimeout(() => {{
-                        toast.remove();
-                    }}, 2000);
-                }});
-            }}
-            copyText();
-        </script>
-    """, height=0)
-
 def copy_button(text, label):
-    """Display a copy button with the given text"""
     col1, col2 = st.columns([4, 1])
     with col1:
         st.markdown(f"""
-        <div style="display: flex; align-items: center; background: rgba(20, 20, 30, 0.5); padding: 0.8rem 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); margin: 0.5rem 0;">
+        <div style="display: flex; align-items: center; background: rgba(20, 20, 30, 0.5); 
+                    padding: 0.8rem 1.5rem; border-radius: 16px; 
+                    border: 1px solid rgba(255,255,255,0.05); margin: 0.5rem 0;">
             <span style="color: #94a3b8; min-width: 60px; font-weight: 500;">{label}</span>
-            <span style="color: #fff; flex: 1; font-weight: 400; word-break: break-all; font-size: 0.9rem;">{text}</span>
+            <span style="color: #fff; flex: 1; font-weight: 400; word-break: break-all;">{text}</span>
         </div>
         """, unsafe_allow_html=True)
     with col2:
         if st.button("📋 Copy", key=f"copy_{text[:10]}"):
-            copy_to_clipboard(text)
-            st.rerun()
-
-def display_skill(name, level, icon=''):
-    """Display a skill bar"""
-    st.markdown(f"""
-    <div class="skill-container">
-        <div class="skill-label">
-            <span>{icon} {name}</span>
-            <span style="color: #facc15; font-weight: 700;">{level}%</span>
-        </div>
-        <div class="skill-bar-bg">
-            <div class="skill-bar-fill" style="width: {level}%;"></div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-def display_testimonial(testimonial):
-    """Display a testimonial card"""
-    st.markdown(f"""
-    <div class="testimonial-card">
-        <span class="testimonial-avatar">{testimonial['avatar']}</span>
-        <div class="testimonial-name">{testimonial['name']}</div>
-        <div class="testimonial-role">{testimonial['role']}</div>
-        <div class="testimonial-text">"{testimonial['text']}"</div>
-    </div>
-    """, unsafe_allow_html=True)
+            st.write(f"✅ Copied: {text}")
+            st.balloons()
 
 # ============================================================
 # LOGIN PAGE
@@ -1068,10 +785,6 @@ def login_page():
     </div>
     """, unsafe_allow_html=True)
 
-# ============================================================
-# REGISTER PAGE
-# ============================================================
-
 def register_page():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -1110,10 +823,6 @@ def register_page():
         
         st.markdown("</div>", unsafe_allow_html=True)
 
-# ============================================================
-# SETTINGS PAGE
-# ============================================================
-
 def settings_page():
     st.markdown("""
     <div class="fade-in-up">
@@ -1128,51 +837,19 @@ def settings_page():
         st.session_state.show_settings = False
         st.rerun()
     
-    tab1, tab2, tab3, tab4 = st.tabs(["🎨 Appearance", "🖼️ Profile Picture", "🔔 Notifications", "🌐 Language"])
+    tab1, tab2, tab3 = st.tabs(["🖼️ Profile Picture", "🎨 Appearance", "🔔 Notifications"])
     
     with tab1:
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        profile_uploader()
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with tab2:
         st.markdown('<div class="glass-card"><h3 style="color: #facc15;">🎨 Appearance</h3>', unsafe_allow_html=True)
         st.selectbox("Theme", ["Dark", "Light", "System Default"])
         st.select_slider("Font Size", options=["Small", "Medium", "Large", "Extra Large"])
         st.toggle("Enable Animations", value=True)
         st.color_picker("Accent Color", "#facc15")
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with tab2:
-        st.markdown('<div class="glass-card"><h3 style="color: #facc15;">🖼️ Profile Picture</h3>', unsafe_allow_html=True)
-        
-        display_profile_picture_uploader()
-        
-        # Show current profile picture
-        if st.session_state.profile_picture_base64:
-            st.markdown("**Current Profile Picture:**")
-            st.image(f"data:image/png;base64,{st.session_state.profile_picture_base64}", width=150)
-            st.caption(f"📁 {st.session_state.profile_picture_filename}")
-            
-            # Remove button
-            if st.button("🗑️ Remove Profile Picture", use_container_width=True):
-                st.session_state.profile_picture_base64 = None
-                st.session_state.profile_picture_filename = None
-                st.session_state.profile_picture_uploaded = False
-                st.session_state.profile_picture = None
-                st.success("✅ Profile picture removed!")
-                st.rerun()
-        else:
-            st.info("📸 No profile picture set. Upload one above!")
-        
-        # Upload new picture
-        uploaded_file = st.file_uploader(
-            "📤 Upload New Picture",
-            type=['jpg', 'jpeg', 'png', 'gif', 'webp'],
-            key="profile_pic_upload",
-            help="Upload a profile picture (JPG, PNG, GIF, WEBP)"
-        )
-        
-        if uploaded_file is not None:
-            if save_profile_picture(uploaded_file):
-                st.success("✅ Profile picture uploaded successfully!")
-                st.rerun()
-        
         st.markdown('</div>', unsafe_allow_html=True)
     
     with tab3:
@@ -1183,17 +860,11 @@ def settings_page():
         st.toggle("Message Notifications", value=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
-    with tab4:
-        st.markdown('<div class="glass-card"><h3 style="color: #facc15;">🌐 Language</h3>', unsafe_allow_html=True)
-        st.selectbox("Interface Language", ["English", "Urdu", "Arabic", "Spanish", "French"])
-        st.selectbox("Time Zone", ["UTC+5 (Pakistan)", "UTC+0 (GMT)", "UTC-5 (EST)"])
-        st.markdown('</div>', unsafe_allow_html=True)
-    
     if st.button("💾 Save Settings", use_container_width=True):
         st.success("✅ Settings saved successfully!")
 
 # ============================================================
-# MAIN PAGES
+# HOME PAGE
 # ============================================================
 
 def home_page():
@@ -1208,7 +879,8 @@ def home_page():
     with col1:
         st.markdown("""
         <div style="margin-top: 1rem;">
-            <div style="font-size: 1rem; color: #facc15; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.3rem;">
+            <div style="font-size: 1rem; color: #facc15; font-weight: 600; letter-spacing: 0.1em; 
+                        text-transform: uppercase; margin-bottom: 0.3rem;">
                 👋 Welcome to my portfolio
             </div>
             <h1 class="main-title">
@@ -1230,7 +902,6 @@ def home_page():
         copy_button(portfolio_data['email'], "📧 Email")
         copy_button(portfolio_data['phone'], "📱 Phone")
         
-        # Social Media Links with icons
         st.markdown("""
         <div style="margin: 1.5rem 0;">
             <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 0.8rem;">🔗 Connect with me:</p>
@@ -1268,14 +939,14 @@ def home_page():
             {get_profile_picture_html()}
             <div style="margin-top: 1rem;">
                 <div style="display: flex; justify-content: center; gap: 1rem; font-size: 2rem;">
-                    <a href="https://github.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none; transition: all 0.3s;">🐙</a>
-                    <a href="https://www.linkedin.com/in/musa-faisal-12345/" target="_blank" style="color: #facc15; text-decoration: none; transition: all 0.3s;">💼</a>
-                    <a href="https://twitter.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none; transition: all 0.3s;">🐦</a>
-                    <a href="https://instagram.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none; transition: all 0.3s;">📷</a>
+                    <a href="https://github.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none;">🐙</a>
+                    <a href="https://www.linkedin.com/in/musa-faisal-12345/" target="_blank" style="color: #facc15; text-decoration: none;">💼</a>
+                    <a href="https://twitter.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none;">🐦</a>
+                    <a href="https://instagram.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none;">📷</a>
                 </div>
                 <div style="margin-top: 0.5rem;">
                     <a href="#" onclick="document.querySelector('[data-testid=\"stSidebar\"]').querySelector('button:contains(\"⚙️ Settings\")').click(); return false;" 
-                       style="color: #94a3b8; text-decoration: none; font-size: 0.8rem; transition: all 0.3s;">
+                       style="color: #94a3b8; text-decoration: none; font-size: 0.8rem;">
                        🖼️ Change Profile Picture
                     </a>
                 </div>
@@ -1284,6 +955,10 @@ def home_page():
         """, unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
+
+# ============================================================
+# OTHER PAGES
+# ============================================================
 
 def about_page():
     if not st.session_state.logged_in:
@@ -1353,7 +1028,17 @@ def skills_page():
     
     for idx, skill in enumerate(skills_data):
         with col1 if idx % 2 == 0 else col2:
-            display_skill(skill['name'], skill['level'], skill['icon'])
+            st.markdown(f"""
+            <div class="skill-container">
+                <div class="skill-label">
+                    <span>{skill['icon']} {skill['name']}</span>
+                    <span style="color: #facc15; font-weight: 700;">{skill['level']}%</span>
+                </div>
+                <div class="skill-bar-bg">
+                    <div class="skill-bar-fill" style="width: {skill['level']}%;"></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
 def projects_page():
     if not st.session_state.logged_in:
@@ -1422,7 +1107,7 @@ def education_page():
     for idx, cert in enumerate(certifications_data):
         with cols[idx % 2]:
             st.markdown(f"""
-            <div style="background: rgba(20, 20, 30, 0.5); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 1.2rem; margin: 0.5rem 0; border-left: 3px solid #facc15; transition: all 0.3s;">
+            <div style="background: rgba(20, 20, 30, 0.5); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 1.2rem; margin: 0.5rem 0; border-left: 3px solid #facc15;">
                 <div style="display: flex; align-items: center; gap: 1rem;">
                     <span style="font-size: 2rem;">{cert['icon']}</span>
                     <div>
@@ -1465,7 +1150,14 @@ def experience_page():
     cols = st.columns(3)
     for idx, testimonial in enumerate(testimonials_data):
         with cols[idx]:
-            display_testimonial(testimonial)
+            st.markdown(f"""
+            <div class="testimonial-card">
+                <span class="testimonial-avatar">{testimonial['avatar']}</span>
+                <div class="testimonial-name">{testimonial['name']}</div>
+                <div class="testimonial-role">{testimonial['role']}</div>
+                <div class="testimonial-text">"{testimonial['text']}"</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 def contact_page():
     if not st.session_state.logged_in:
@@ -1503,13 +1195,6 @@ def contact_page():
                         <div style="color: #fff;">{portfolio_data['phone']}</div>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <span style="font-size: 1.5rem;">🏫</span>
-                    <div>
-                        <div style="color: #94a3b8; font-size: 0.8rem;">School</div>
-                        <div style="color: #fff;">{portfolio_data['school']}</div>
-                    </div>
-                </div>
                 <div style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem 0;">
                     <span style="font-size: 1.5rem;">📍</span>
                     <div>
@@ -1539,13 +1224,6 @@ def contact_page():
                 if name and email and message:
                     st.success("✅ Message sent successfully!")
                     st.balloons()
-                    st.session_state.messages.append({
-                        'name': name,
-                        'email': email,
-                        'subject': subject,
-                        'message': message,
-                        'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
-                    })
                 else:
                     st.error("⚠️ Please fill in all required fields!")
 
@@ -1560,14 +1238,6 @@ def gallery_page():
             🖼️ <span class="gradient-text">Gallery</span>
         </h1>
         <div class="divider"></div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style="border: 2px dashed rgba(255,255,255,0.05); border-radius: 20px; padding: 2rem; text-align: center; background: rgba(20,20,30,0.3); transition: all 0.3s; cursor: pointer;">
-        <div style="font-size: 4rem;">📸</div>
-        <h3 style="color: #fff;">Upload Your Images</h3>
-        <p style="color: #94a3b8;">Drag and drop or click to upload</p>
     </div>
     """, unsafe_allow_html=True)
     
