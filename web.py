@@ -1,10 +1,14 @@
 # portfolio_streamlit.py
-# Professional Portfolio with Modern UI - ENHANCED
+# Professional Portfolio with Modern UI - WITH PERMANENT PROFILE PICTURE
 
 import streamlit as st
 import datetime
 import time
-import re
+import base64
+from PIL import Image
+import io
+import os
+import hashlib
 
 # ============================================================
 # PAGE CONFIGURATION
@@ -42,6 +46,14 @@ if 'copy_success' not in st.session_state:
     st.session_state.copy_success = False
 if 'copy_text' not in st.session_state:
     st.session_state.copy_text = ''
+if 'profile_picture' not in st.session_state:
+    st.session_state.profile_picture = None
+if 'profile_picture_base64' not in st.session_state:
+    st.session_state.profile_picture_base64 = None
+if 'profile_picture_filename' not in st.session_state:
+    st.session_state.profile_picture_filename = None
+if 'profile_picture_uploaded' not in st.session_state:
+    st.session_state.profile_picture_uploaded = False
 
 # ============================================================
 # PORTFOLIO DATA
@@ -57,7 +69,7 @@ portfolio_data = {
     'location': 'Pakistan',
     'bio': '🎓 Passionate student with a love for technology, programming, and creative problem-solving. Always eager to learn new things and build amazing projects! I believe in continuous learning and using technology to make a positive impact.',
     'github': 'https://github.com/musafaisal',
-    'linkedin': 'https://www.linkedin.com/in/musa-faisal-12345/',  # Replace with your actual LinkedIn
+    'linkedin': 'https://www.linkedin.com/in/musa-faisal-12345/',
     'twitter': 'https://twitter.com/musafaisal',
     'instagram': 'https://instagram.com/musafaisal',
     'tiktok': 'https://tiktok.com/@musafaisal',
@@ -183,6 +195,203 @@ testimonials_data = [
         'avatar': '👨‍🎓'
     }
 ]
+
+# ============================================================
+# HELPER FUNCTIONS FOR PROFILE PICTURE
+# ============================================================
+
+def save_profile_picture(uploaded_file):
+    """Save profile picture to session state as base64"""
+    if uploaded_file is not None:
+        try:
+            # Read the image
+            image = Image.open(uploaded_file)
+            
+            # Resize image to standard size (500x500) to save memory
+            image.thumbnail((500, 500), Image.LANCZOS)
+            
+            # Convert to base64
+            buffered = io.BytesIO()
+            image.save(buffered, format=image.format if image.format else "PNG")
+            img_str = base64.b64encode(buffered.getvalue()).decode()
+            
+            # Store in session state
+            st.session_state.profile_picture_base64 = img_str
+            st.session_state.profile_picture_filename = uploaded_file.name
+            st.session_state.profile_picture_uploaded = True
+            st.session_state.profile_picture = image
+            
+            return True
+        except Exception as e:
+            st.error(f"❌ Error uploading image: {str(e)}")
+            return False
+    return False
+
+def get_profile_picture_html():
+    """Get HTML for profile picture"""
+    if st.session_state.profile_picture_base64:
+        return f"""
+        <div class="profile-image-container">
+            <img src="data:image/png;base64,{st.session_state.profile_picture_base64}" 
+                 alt="Profile Picture" 
+                 class="profile-image-img">
+            <div class="profile-image-overlay">
+                <span class="profile-image-emoji">📸</span>
+            </div>
+        </div>
+        """
+    else:
+        return """
+        <div class="profile-image pulse">
+            👨‍💻
+        </div>
+        """
+
+def display_profile_picture_uploader():
+    """Display profile picture upload section"""
+    st.markdown("""
+    <style>
+    .profile-image-container {
+        position: relative;
+        width: 280px;
+        height: 280px;
+        margin: 0 auto;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 4px solid rgba(250, 204, 21, 0.2);
+        box-shadow: 0 20px 60px rgba(250, 204, 21, 0.1);
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .profile-image-container:hover {
+        transform: scale(1.02);
+        box-shadow: 0 30px 80px rgba(250, 204, 21, 0.2);
+    }
+    
+    .profile-image-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .profile-image-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .profile-image-container:hover .profile-image-overlay {
+        opacity: 1;
+    }
+    
+    .profile-image-emoji {
+        font-size: 3rem;
+        color: white;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .profile-image {
+        width: 280px;
+        height: 280px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #facc15, #f59e0b);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 7rem;
+        border: 4px solid rgba(250, 204, 21, 0.2);
+        box-shadow: 0 20px 60px rgba(250, 204, 21, 0.1);
+        margin: 0 auto;
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+    }
+    
+    .profile-image:hover {
+        transform: scale(1.02) rotate(-2deg);
+        box-shadow: 0 30px 80px rgba(250, 204, 21, 0.2);
+    }
+    
+    .upload-section {
+        text-align: center;
+        margin: 1rem 0;
+        padding: 1.5rem;
+        background: rgba(20, 20, 30, 0.5);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .upload-btn-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+    }
+    
+    .upload-btn-wrapper input[type=file] {
+        font-size: 100px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+    
+    .upload-btn {
+        background: linear-gradient(135deg, #facc15, #f59e0b);
+        color: #0a0a0f;
+        padding: 0.6rem 1.5rem;
+        border-radius: 50px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-block;
+    }
+    
+    .upload-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(250, 204, 21, 0.3);
+    }
+    
+    .remove-btn {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+        padding: 0.6rem 1.5rem;
+        border-radius: 50px;
+        font-weight: 700;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-block;
+        margin-left: 0.5rem;
+    }
+    
+    .remove-btn:hover {
+        background: rgba(239, 68, 68, 0.3);
+        transform: scale(1.05);
+    }
+    
+    @media (max-width: 768px) {
+        .profile-image-container {
+            width: 200px;
+            height: 200px;
+        }
+        .profile-image {
+            width: 200px;
+            height: 200px;
+            font-size: 5rem;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # ============================================================
 # CUSTOM CSS
@@ -380,7 +589,6 @@ st.markdown("""
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         height: 100%;
         margin: 0.5rem 0;
-        cursor: pointer;
         position: relative;
         overflow: hidden;
     }
@@ -743,13 +951,11 @@ def copy_to_clipboard(text):
     """Copy text to clipboard using JavaScript"""
     st.session_state.copy_success = True
     st.session_state.copy_text = text
-    # Use JavaScript to copy to clipboard
     st.components.v1.html(f"""
         <script>
             function copyText() {{
                 const text = `{text}`;
                 navigator.clipboard.writeText(text).then(() => {{
-                    // Show success
                     const toast = document.createElement('div');
                     toast.className = 'copy-toast copy-toast-success';
                     toast.innerHTML = '✅ Copied to clipboard!';
@@ -758,7 +964,6 @@ def copy_to_clipboard(text):
                         toast.remove();
                     }}, 2000);
                 }}).catch(() => {{
-                    // Fallback
                     const textArea = document.createElement('textarea');
                     textArea.value = text;
                     document.body.appendChild(textArea);
@@ -818,10 +1023,6 @@ def display_testimonial(testimonial):
     </div>
     """, unsafe_allow_html=True)
 
-def open_link(url):
-    """Open a link in a new tab"""
-    st.markdown(f'<a href="{url}" target="_blank" style="text-decoration: none;">', unsafe_allow_html=True)
-
 # ============================================================
 # LOGIN PAGE
 # ============================================================
@@ -829,7 +1030,12 @@ def open_link(url):
 def login_page():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        
+        st.markdown("""
+        <div class="login-container">
+            <div style="text-align: center; font-size: 4rem; margin-bottom: 0.5rem;">🚀</div>
+            <h1 class="login-title">Welcome <span>Back</span></h1>
+            <p class="login-subtitle">Sign in to access your portfolio</p>
+        """)
         
         with st.form("login_form"):
             username = st.text_input("👤 Username", placeholder="Enter your username")
@@ -922,7 +1128,7 @@ def settings_page():
         st.session_state.show_settings = False
         st.rerun()
     
-    tab1, tab2, tab3 = st.tabs(["🎨 Appearance", "🔔 Notifications", "🌐 Language"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🎨 Appearance", "🖼️ Profile Picture", "🔔 Notifications", "🌐 Language"])
     
     with tab1:
         st.markdown('<div class="glass-card"><h3 style="color: #facc15;">🎨 Appearance</h3>', unsafe_allow_html=True)
@@ -933,6 +1139,43 @@ def settings_page():
         st.markdown('</div>', unsafe_allow_html=True)
     
     with tab2:
+        st.markdown('<div class="glass-card"><h3 style="color: #facc15;">🖼️ Profile Picture</h3>', unsafe_allow_html=True)
+        
+        display_profile_picture_uploader()
+        
+        # Show current profile picture
+        if st.session_state.profile_picture_base64:
+            st.markdown("**Current Profile Picture:**")
+            st.image(f"data:image/png;base64,{st.session_state.profile_picture_base64}", width=150)
+            st.caption(f"📁 {st.session_state.profile_picture_filename}")
+            
+            # Remove button
+            if st.button("🗑️ Remove Profile Picture", use_container_width=True):
+                st.session_state.profile_picture_base64 = None
+                st.session_state.profile_picture_filename = None
+                st.session_state.profile_picture_uploaded = False
+                st.session_state.profile_picture = None
+                st.success("✅ Profile picture removed!")
+                st.rerun()
+        else:
+            st.info("📸 No profile picture set. Upload one above!")
+        
+        # Upload new picture
+        uploaded_file = st.file_uploader(
+            "📤 Upload New Picture",
+            type=['jpg', 'jpeg', 'png', 'gif', 'webp'],
+            key="profile_pic_upload",
+            help="Upload a profile picture (JPG, PNG, GIF, WEBP)"
+        )
+        
+        if uploaded_file is not None:
+            if save_profile_picture(uploaded_file):
+                st.success("✅ Profile picture uploaded successfully!")
+                st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with tab3:
         st.markdown('<div class="glass-card"><h3 style="color: #facc15;">🔔 Notifications</h3>', unsafe_allow_html=True)
         st.toggle("Email Notifications", value=True)
         st.toggle("Push Notifications", value=True)
@@ -940,7 +1183,7 @@ def settings_page():
         st.toggle("Message Notifications", value=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
-    with tab3:
+    with tab4:
         st.markdown('<div class="glass-card"><h3 style="color: #facc15;">🌐 Language</h3>', unsafe_allow_html=True)
         st.selectbox("Interface Language", ["English", "Urdu", "Arabic", "Spanish", "French"])
         st.selectbox("Time Zone", ["UTC+5 (Pakistan)", "UTC+0 (GMT)", "UTC-5 (EST)"])
@@ -1020,17 +1263,21 @@ def home_page():
         """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown("""
+        st.markdown(f"""
         <div style="text-align: center; margin-top: 2rem;">
-            <div class="profile-image pulse">
-                👨‍💻
-            </div>
+            {get_profile_picture_html()}
             <div style="margin-top: 1rem;">
                 <div style="display: flex; justify-content: center; gap: 1rem; font-size: 2rem;">
                     <a href="https://github.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none; transition: all 0.3s;">🐙</a>
                     <a href="https://www.linkedin.com/in/musa-faisal-12345/" target="_blank" style="color: #facc15; text-decoration: none; transition: all 0.3s;">💼</a>
                     <a href="https://twitter.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none; transition: all 0.3s;">🐦</a>
                     <a href="https://instagram.com/musafaisal" target="_blank" style="color: #facc15; text-decoration: none; transition: all 0.3s;">📷</a>
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <a href="#" onclick="document.querySelector('[data-testid=\"stSidebar\"]').querySelector('button:contains(\"⚙️ Settings\")').click(); return false;" 
+                       style="color: #94a3b8; text-decoration: none; font-size: 0.8rem; transition: all 0.3s;">
+                       🖼️ Change Profile Picture
+                    </a>
                 </div>
             </div>
         </div>
