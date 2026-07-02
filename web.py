@@ -1,5 +1,5 @@
 # portfolio_streamlit.py
-# Professional Portfolio with Modern UI - WITH PROFILE UPLOADER
+# Professional Portfolio with Modern UI - PROFILE UPLOADER ON HOME PAGE
 
 import streamlit as st
 import datetime
@@ -7,6 +7,8 @@ import time
 import base64
 from PIL import Image
 import io
+import os
+import json
 
 # ============================================================
 # PAGE CONFIGURATION
@@ -40,12 +42,330 @@ if 'users' not in st.session_state:
     }
 if 'messages' not in st.session_state:
     st.session_state.messages = []
-if 'profile_picture' not in st.session_state:
-    st.session_state.profile_picture = None
 if 'profile_picture_base64' not in st.session_state:
     st.session_state.profile_picture_base64 = None
 if 'profile_picture_filename' not in st.session_state:
     st.session_state.profile_picture_filename = None
+if 'profile_picture_uploaded' not in st.session_state:
+    st.session_state.profile_picture_uploaded = False
+
+# ============================================================
+# PROFILE PICTURE FUNCTIONS
+# ============================================================
+
+def save_profile_picture(uploaded_file):
+    """Save profile picture to session state and file"""
+    if uploaded_file is not None:
+        try:
+            # Read and resize image
+            image = Image.open(uploaded_file)
+            image.thumbnail((500, 500), Image.LANCZOS)
+            
+            # Convert to base64
+            buffered = io.BytesIO()
+            image.save(buffered, format="PNG")
+            img_str = base64.b64encode(buffered.getvalue()).decode()
+            
+            # Store in session state
+            st.session_state.profile_picture_base64 = img_str
+            st.session_state.profile_picture_filename = uploaded_file.name
+            st.session_state.profile_picture_uploaded = True
+            
+            # Save to file for permanent storage
+            save_profile_to_file(img_str, uploaded_file.name)
+            
+            return True
+        except Exception as e:
+            st.error(f"❌ Error uploading image: {str(e)}")
+            return False
+    return False
+
+def save_profile_to_file(img_str, filename):
+    """Save profile picture to a file for permanent storage"""
+    try:
+        data = {
+            'base64': img_str,
+            'filename': filename,
+            'timestamp': datetime.datetime.now().isoformat()
+        }
+        with open('profile_picture.json', 'w') as f:
+            json.dump(data, f)
+        return True
+    except:
+        return False
+
+def load_profile_from_file():
+    """Load profile picture from file"""
+    try:
+        if os.path.exists('profile_picture.json'):
+            with open('profile_picture.json', 'r') as f:
+                data = json.load(f)
+                st.session_state.profile_picture_base64 = data.get('base64')
+                st.session_state.profile_picture_filename = data.get('filename')
+                st.session_state.profile_picture_uploaded = True
+                return True
+    except:
+        pass
+    return False
+
+def get_profile_picture_html():
+    """Get HTML for profile picture display"""
+    if st.session_state.profile_picture_base64:
+        return f"""
+        <div class="profile-image-container">
+            <img src="data:image/png;base64,{st.session_state.profile_picture_base64}" 
+                 alt="Profile Picture" 
+                 class="profile-image-img">
+            <div class="profile-image-overlay">
+                <span class="profile-image-emoji">📸</span>
+            </div>
+        </div>
+        """
+    else:
+        return """
+        <div class="profile-image pulse">
+            👨‍💻
+        </div>
+        """
+
+def profile_uploader_ui():
+    """Profile picture uploader UI with button"""
+    st.markdown("""
+    <style>
+    .profile-image-container {
+        position: relative;
+        width: 280px;
+        height: 280px;
+        margin: 0 auto;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 4px solid rgba(250, 204, 21, 0.3);
+        box-shadow: 0 20px 60px rgba(250, 204, 21, 0.15);
+        transition: all 0.5s ease;
+        cursor: pointer;
+    }
+    
+    .profile-image-container:hover {
+        transform: scale(1.02);
+        box-shadow: 0 30px 80px rgba(250, 204, 21, 0.25);
+    }
+    
+    .profile-image-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .profile-image-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .profile-image-container:hover .profile-image-overlay {
+        opacity: 1;
+    }
+    
+    .profile-image-emoji {
+        font-size: 3rem;
+        color: white;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .profile-image {
+        width: 280px;
+        height: 280px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #facc15, #f59e0b);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 7rem;
+        border: 4px solid rgba(250, 204, 21, 0.3);
+        box-shadow: 0 20px 60px rgba(250, 204, 21, 0.15);
+        margin: 0 auto;
+        transition: all 0.5s ease;
+        user-select: none;
+    }
+    
+    .profile-image:hover {
+        transform: scale(1.02) rotate(-2deg);
+        box-shadow: 0 30px 80px rgba(250, 204, 21, 0.25);
+    }
+    
+    .upload-btn-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        margin: 0.5rem 0;
+    }
+    
+    .upload-btn-wrapper input[type=file] {
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+    
+    .upload-btn {
+        background: linear-gradient(135deg, #facc15, #f59e0b);
+        color: #0a0a0f;
+        padding: 0.7rem 2rem;
+        border-radius: 50px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-block;
+        font-size: 1rem;
+    }
+    
+    .upload-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(250, 204, 21, 0.3);
+    }
+    
+    .remove-btn {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+        padding: 0.7rem 2rem;
+        border-radius: 50px;
+        font-weight: 700;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-block;
+        font-size: 1rem;
+    }
+    
+    .remove-btn:hover {
+        background: rgba(239, 68, 68, 0.25);
+        transform: scale(1.05);
+    }
+    
+    .upload-container {
+        text-align: center;
+        margin: 1rem 0;
+        padding: 1.5rem;
+        background: rgba(20, 20, 30, 0.5);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 0.3rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin: 0.5rem 0;
+    }
+    
+    .status-badge.success {
+        background: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+        border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+    
+    .status-badge.info {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    
+    @media (max-width: 768px) {
+        .profile-image-container {
+            width: 200px;
+            height: 200px;
+        }
+        .profile-image {
+            width: 200px;
+            height: 200px;
+            font-size: 5rem;
+        }
+        .upload-btn, .remove-btn {
+            padding: 0.5rem 1.5rem;
+            font-size: 0.9rem;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Show profile picture with upload overlay
+    st.markdown(get_profile_picture_html(), unsafe_allow_html=True)
+    
+    # Status badge
+    if st.session_state.profile_picture_uploaded:
+        st.markdown(f"""
+        <div style="text-align: center;">
+            <span class="status-badge success">✅ Profile Picture Set</span>
+            <p style="color: #64748b; font-size: 0.8rem;">📁 {st.session_state.profile_picture_filename}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="text-align: center;">
+            <span class="status-badge info">📸 No Profile Picture</span>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Upload and Remove buttons
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        <div class="upload-btn-wrapper">
+            <button class="upload-btn">📤 Upload Picture</button>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        uploaded_file = st.file_uploader(
+            "Choose a profile picture",
+            type=['jpg', 'jpeg', 'png', 'gif', 'webp'],
+            key="home_profile_upload",
+            label_visibility="collapsed"
+        )
+        
+        if uploaded_file is not None:
+            with st.spinner("Uploading..."):
+                if save_profile_picture(uploaded_file):
+                    st.success("✅ Profile picture uploaded successfully!")
+                    time.sleep(0.5)
+                    st.rerun()
+    
+    with col2:
+        if st.session_state.profile_picture_uploaded:
+            if st.button("🗑️ Remove Picture", key="remove_home", use_container_width=True):
+                st.session_state.profile_picture_base64 = None
+                st.session_state.profile_picture_filename = None
+                st.session_state.profile_picture_uploaded = False
+                # Remove from file
+                try:
+                    if os.path.exists('profile_picture.json'):
+                        os.remove('profile_picture.json')
+                except:
+                    pass
+                st.success("✅ Profile picture removed!")
+                st.rerun()
+    
+    st.markdown("""
+    <div style="margin-top: 0.5rem; padding: 0.8rem; background: rgba(255,255,255,0.02); border-radius: 10px;">
+        <p style="color: #64748b; font-size: 0.75rem; text-align: center; margin: 0;">
+            💡 Hover over the image to change · Supports JPG, PNG, GIF, WEBP
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ============================================================
 # PORTFOLIO DATA
@@ -189,169 +509,11 @@ testimonials_data = [
 ]
 
 # ============================================================
-# PROFILE PICTURE FUNCTIONS
-# ============================================================
-
-def save_profile_picture(uploaded_file):
-    """Save profile picture to session state"""
-    if uploaded_file is not None:
-        try:
-            # Read and resize image
-            image = Image.open(uploaded_file)
-            image.thumbnail((500, 500), Image.LANCZOS)
-            
-            # Convert to base64
-            buffered = io.BytesIO()
-            image.save(buffered, format="PNG")
-            img_str = base64.b64encode(buffered.getvalue()).decode()
-            
-            # Store in session state
-            st.session_state.profile_picture_base64 = img_str
-            st.session_state.profile_picture_filename = uploaded_file.name
-            st.session_state.profile_picture = image
-            
-            return True
-        except Exception as e:
-            st.error(f"❌ Error uploading image: {str(e)}")
-            return False
-    return False
-
-def get_profile_picture_html():
-    """Get HTML for profile picture display"""
-    if st.session_state.profile_picture_base64:
-        return f"""
-        <div style="position: relative; width: 280px; height: 280px; margin: 0 auto;">
-            <img src="data:image/png;base64,{st.session_state.profile_picture_base64}" 
-                 style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; 
-                        border: 4px solid rgba(250, 204, 21, 0.3); 
-                        box-shadow: 0 20px 60px rgba(250, 204, 21, 0.15);">
-            <div style="position: absolute; bottom: 10px; right: 10px; 
-                        background: rgba(0,0,0,0.7); border-radius: 50%; 
-                        padding: 8px; font-size: 1.2rem;">
-                📸
-            </div>
-        </div>
-        """
-    else:
-        return """
-        <div style="width: 280px; height: 280px; border-radius: 50%; 
-                    background: linear-gradient(135deg, #facc15, #f59e0b);
-                    display: flex; align-items: center; justify-content: center; 
-                    font-size: 7rem; border: 4px solid rgba(250, 204, 21, 0.2);
-                    box-shadow: 0 20px 60px rgba(250, 204, 21, 0.1);
-                    margin: 0 auto;">
-            👨‍💻
-        </div>
-        """
-
-def profile_uploader():
-    """Profile picture uploader UI"""
-    st.markdown("""
-    <style>
-    .upload-container {
-        background: rgba(20, 20, 30, 0.7);
-        border: 2px dashed rgba(250, 204, 21, 0.2);
-        border-radius: 20px;
-        padding: 2rem;
-        text-align: center;
-        transition: all 0.3s ease;
-        margin: 1rem 0;
-    }
-    .upload-container:hover {
-        border-color: rgba(250, 204, 21, 0.5);
-        background: rgba(20, 20, 30, 0.9);
-    }
-    .upload-icon {
-        font-size: 4rem;
-        margin-bottom: 1rem;
-    }
-    .upload-text {
-        color: #94a3b8;
-        font-size: 1.1rem;
-        margin-bottom: 0.5rem;
-    }
-    .upload-subtext {
-        color: #64748b;
-        font-size: 0.85rem;
-    }
-    .preview-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 1rem 0;
-    }
-    .preview-img {
-        width: 200px;
-        height: 200px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid rgba(250, 204, 21, 0.3);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
-    .remove-btn {
-        background: rgba(239, 68, 68, 0.15);
-        color: #ef4444;
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        padding: 0.5rem 1.5rem;
-        border-radius: 50px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-weight: 600;
-        font-size: 0.9rem;
-        margin-top: 0.5rem;
-    }
-    .remove-btn:hover {
-        background: rgba(239, 68, 68, 0.25);
-        transform: scale(1.05);
-    }
-    .file-uploader {
-        margin: 1rem 0;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Show current profile picture
-    if st.session_state.profile_picture_base64:
-        st.markdown("### 🖼️ Current Profile Picture")
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.image(f"data:image/png;base64,{st.session_state.profile_picture_base64}", 
-                    width=200, 
-                    output_format="PNG")
-            st.caption(f"📁 {st.session_state.profile_picture_filename}")
-            
-            if st.button("🗑️ Remove Picture", key="remove_pic", use_container_width=True):
-                st.session_state.profile_picture_base64 = None
-                st.session_state.profile_picture_filename = None
-                st.session_state.profile_picture = None
-                st.success("✅ Profile picture removed!")
-                st.rerun()
-    
-    # Upload new picture
-    st.markdown("### 📤 Upload New Picture")
-    uploaded_file = st.file_uploader(
-        "Choose a profile picture",
-        type=['jpg', 'jpeg', 'png', 'gif', 'webp'],
-        key="profile_uploader",
-        help="Upload a profile picture (JPG, PNG, GIF, WEBP)"
-    )
-    
-    if uploaded_file is not None:
-        if save_profile_picture(uploaded_file):
-            st.success("✅ Profile picture uploaded successfully!")
-            st.rerun()
-        else:
-            st.error("❌ Failed to upload picture. Please try again.")
-    
-    
-
-# ============================================================
 # CUSTOM CSS
 # ============================================================
 
 st.markdown("""
 <style>
-    /* Main Styles */
     .stApp {
         background: #0a0a0f;
     }
@@ -642,30 +804,6 @@ st.markdown("""
         gap: 0.5rem;
     }
     
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-    }
-    
-    .fade-in-up {
-        animation: fadeInUp 0.8s ease forwards;
-    }
-    
-    .pulse {
-        animation: pulse 2s ease-in-out infinite;
-    }
-    
     .login-container {
         background: rgba(20, 20, 30, 0.8);
         backdrop-filter: blur(20px);
@@ -688,6 +826,13 @@ st.markdown("""
         color: #facc15;
     }
     
+    .login-subtitle {
+        text-align: center;
+        color: #94a3b8;
+        font-size: 1rem;
+        margin-bottom: 2rem;
+    }
+    
     .stButton > button {
         background: linear-gradient(135deg, #facc15, #f59e0b) !important;
         color: #0a0a0f !important;
@@ -702,6 +847,24 @@ st.markdown("""
     .stButton > button:hover {
         transform: scale(1.02) !important;
         box-shadow: 0 10px 30px rgba(250, 204, 21, 0.3) !important;
+    }
+    
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    .fade-in-up {
+        animation: fadeInUp 0.8s ease forwards;
+    }
+    
+    .pulse {
+        animation: pulse 2s ease-in-out infinite;
     }
     
     @media (max-width: 768px) {
@@ -731,7 +894,29 @@ def copy_button(text, label):
     with col2:
         if st.button("📋 Copy", key=f"copy_{text[:10]}"):
             st.write(f"✅ Copied: {text}")
-            st.balloons()
+
+def display_skill(name, level, icon=''):
+    st.markdown(f"""
+    <div class="skill-container">
+        <div class="skill-label">
+            <span>{icon} {name}</span>
+            <span style="color: #facc15; font-weight: 700;">{level}%</span>
+        </div>
+        <div class="skill-bar-bg">
+            <div class="skill-bar-fill" style="width: {level}%;"></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def display_testimonial(testimonial):
+    st.markdown(f"""
+    <div class="testimonial-card">
+        <span class="testimonial-avatar">{testimonial['avatar']}</span>
+        <div class="testimonial-name">{testimonial['name']}</div>
+        <div class="testimonial-role">{testimonial['role']}</div>
+        <div class="testimonial-text">"{testimonial['text']}"</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ============================================================
 # LOGIN PAGE
@@ -834,7 +1019,7 @@ def settings_page():
     
     with tab1:
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        profile_uploader()
+        profile_uploader_ui()
         st.markdown('</div>', unsafe_allow_html=True)
     
     with tab2:
@@ -927,8 +1112,17 @@ def home_page():
         """, unsafe_allow_html=True)
     
     with col2:
-       
-           
+        st.markdown("""
+        <div style="text-align: center; margin-top: 2rem;">
+        """, unsafe_allow_html=True)
+        
+        # Profile picture uploader on home page
+        profile_uploader_ui()
+        
+        st.markdown("""
+        </div>
+        """, unsafe_allow_html=True)
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================
@@ -1003,17 +1197,7 @@ def skills_page():
     
     for idx, skill in enumerate(skills_data):
         with col1 if idx % 2 == 0 else col2:
-            st.markdown(f"""
-            <div class="skill-container">
-                <div class="skill-label">
-                    <span>{skill['icon']} {skill['name']}</span>
-                    <span style="color: #facc15; font-weight: 700;">{skill['level']}%</span>
-                </div>
-                <div class="skill-bar-bg">
-                    <div class="skill-bar-fill" style="width: {skill['level']}%;"></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            display_skill(skill['name'], skill['level'], skill['icon'])
 
 def projects_page():
     if not st.session_state.logged_in:
@@ -1125,14 +1309,7 @@ def experience_page():
     cols = st.columns(3)
     for idx, testimonial in enumerate(testimonials_data):
         with cols[idx]:
-            st.markdown(f"""
-            <div class="testimonial-card">
-                <span class="testimonial-avatar">{testimonial['avatar']}</span>
-                <div class="testimonial-name">{testimonial['name']}</div>
-                <div class="testimonial-role">{testimonial['role']}</div>
-                <div class="testimonial-text">"{testimonial['text']}"</div>
-            </div>
-            """, unsafe_allow_html=True)
+            display_testimonial(testimonial)
 
 def contact_page():
     if not st.session_state.logged_in:
@@ -1308,6 +1485,10 @@ def sidebar():
 # ============================================================
 
 def main():
+    # Load profile picture from file on startup
+    if not st.session_state.profile_picture_uploaded:
+        load_profile_from_file()
+    
     if st.session_state.show_settings:
         settings_page()
         return
