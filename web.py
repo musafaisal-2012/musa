@@ -343,14 +343,7 @@ def profile_uploader():
         else:
             st.error("❌ Failed to upload picture. Please try again.")
     
-    st.markdown("""
-    <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 10px;">
-        <p style="color: #64748b; font-size: 0.8rem;">
-            💡 <strong>Tip:</strong> Upload a square image for best results. 
-            Supported formats: JPG, PNG, GIF, WEBP
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    
 
 # ============================================================
 # CUSTOM CSS
